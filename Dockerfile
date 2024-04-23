@@ -24,11 +24,11 @@ USER root
 ENV HOME=/root
 
 # Install build and dev tools
-# NOTE: Require python38 to install pre-commit
+# NOTE: Require python39 to install pre-commit
 RUN --mount=type=cache,target=/root/.cache/dnf:rw \
     dnf install --setopt=cachedir=/root/.cache/dnf -y --nodocs \
         nodejs \
-        python38 \
+        python39 \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && true
@@ -149,24 +149,44 @@ RUN --mount=type=cache,target=/root/.cache/microdnf:rw \
     microdnf install --setopt=cachedir=/root/.cache/microdnf \
        gcc \
        gcc-c++ \
-       python38-devel \
-       python38 \
+       python39-devel \
+       python39 \
+       openssl-devel \
+       wget \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && ln -sf /usr/bin/pip3 /usr/bin/pip \
     && true
 
+
 # need to upgrade pip and install wheel before installing grpcio, before installing tensorflow on aarch64
 # use caching to speed up multi-platform builds
 ENV PIP_CACHE_DIR=/root/.cache/pip
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install wheel && \
-    pip install grpcio && \
-    # pin to 3.10.0 to avoid error: libhdf5.so: cannot open shared object file: No such file or directory \
-    # if not version is set, it will install the 3.11.0 version which, seems that does not have the h5py dependencies \
-    # for arm yet.
-    pip install h5py==3.10.0 && \
-    pip install tensorflow
+ENV GRPC_PYTHON_BUILD_SYSTEM_OPENSSL 1
+RUN ARCH=$(uname -m) ; echo $ARCH ;\
+    if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "aarch64" ] ; then \
+    --mount=type=cache,target=/root/.cache/pip ; \
+    pip install --upgrade pip ; \
+    pip install --upgrade pip ; \
+    pip install wheel ; \
+    pip install grpcio ; \
+    pip install tensorflow ;\
+    fi 
+    
+
+RUN ARCH=$(uname -m) ; echo $ARCH; \
+    if [ "$ARCH" == "s390x" ] ; then \
+    wget -q -O miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py39_23.1.0-1-Linux-s390x.sh ; \
+    chmod 755 miniconda.sh ; \
+    echo 'export PATH=/opt/conda3/bin:$PATH' > /etc/profile.d/conda.sh ; \
+    env | grep conda3 ;\
+    /bin/bash miniconda.sh -b -p /opt/conda3 ; \
+    rm miniconda.sh ; \
+    . /etc/profile.d/conda.sh ; \
+    /opt/conda3/bin/conda install -y -q python=3.9;\
+    ln -s /opt/conda3 /opt/conda;\
+    /opt/conda3/bin/conda config --prepend channels https://ausgsa.ibm.com:7191/gsa/ausgsa/projects/o/open-ce/conda/Open-CE-r1.9/1.9.4/opence-cpu-s390x/; \
+    conda install -y tensorflow-cpu;\
+    fi
 
 USER ${USER}
 
