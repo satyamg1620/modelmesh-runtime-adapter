@@ -161,20 +161,21 @@ RUN --mount=type=cache,target=/root/.cache/microdnf:rw \
 # need to upgrade pip and install wheel before installing grpcio, before installing tensorflow on aarch64
 # use caching to speed up multi-platform builds
 ENV PIP_CACHE_DIR=/root/.cache/pip
-ENV GRPC_PYTHON_BUILD_SYSTEM_OPENSSL 1
 RUN ARCH=$(uname -m) ; echo $ARCH ;\
     if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "aarch64" ] ; then \
     --mount=type=cache,target=/root/.cache/pip ; \
     pip install --upgrade pip ; \
-    pip install --upgrade pip ; \
     pip install wheel ; \
     pip install grpcio ; \
+    pip install h5py==3.10.0 && \
     pip install tensorflow ;\
     fi 
     
-
+ENV GRPC_PYTHON_BUILD_SYSTEM_OPENSSL 1
 RUN ARCH=$(uname -m) ; echo $ARCH; \
     if [ "$ARCH" == "s390x" ] ; then \
+    pip install --upgrade pip ; \
+    pip install grpcio ; \
     wget -q -O miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-py39_23.1.0-1-Linux-s390x.sh ; \
     chmod 755 miniconda.sh ; \
     echo 'export PATH=/opt/conda3/bin:$PATH' > /etc/profile.d/conda.sh ; \
