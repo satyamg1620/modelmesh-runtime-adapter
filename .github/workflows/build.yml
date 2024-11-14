@@ -10,9 +10,8 @@ on:
   push:
     branches:
       - main
+      - s390x
       - "release-[0-9].[0-9]+"
-    tags:
-      - "v*"
     paths-ignore:
       - "**.md"
 
